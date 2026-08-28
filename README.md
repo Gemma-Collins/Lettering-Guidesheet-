@@ -11,7 +11,49 @@ A self-contained, client-side tool for building custom calligraphy practice shee
 - `index.html` / `style.css` / `app.js` — the app.
 - `vendor-jspdf.umd.min.js` — jsPDF, vendored locally so the tool has no external runtime dependencies (no CDN calls, works even with strict site CSPs).
 
+   index.html
+   the file the browser opens.
+      Page Structure:
+         Sidebar controls (paper size, sliders, checkboxes, buttons)
+         canvas where the guide sheet is drawn.
+
+   style.css
+   visual styling
+      colors, layout, spacing, fonts for the controls panel and preview area
+
+   app.js
+   The logic
+      i.e. where to change behavior or add features.
+      draws the guide lines/slant lines on the canvas,
+      control handling
+         paper size, x-height, presets, photo upload/drag/scale/rotate
+      builds the PDF on download.
+
+   vendor-jspdf.umd.min.js
+   A third-party library (jsPDF)
+   does the actual PDF-building.
+   Bundled locally rather than loaded from the internet, so the tool doesn't break if a CDN is down.
+   Shouldn't need to touch this one.
+
+   README.md
+   documentation on what the tool does and how to embed it.
+   Provides so functionality
+
+If you want to tweak colors/spaci
+
 ## Embedding on your website
+
+## Commiting
+Check
+   git branch --show-current     show with branch I'm on
+   git branch -a                 show all brances in repo
+   git switch [branch to move to]switch to different branch
+   git status
+   git diff
+Commiting
+   git add . — stages every changed file (everything you edited since the last push)
+   git commit -m "..." — saves those staged changes as a checkpoint with a message describing what changed
+   git push — uploads that commit to GitHub, which triggers GitHub Pages to redeploy automatically
 
 Copy these files to your site and either:
 
@@ -22,3 +64,5 @@ Copy these files to your site and either:
 2. **Direct include:** host the files at a path (e.g. `/tools/lettering-guidesheet/`) and link to it directly.
 
 No build step, server, or API keys are required.
+
+
