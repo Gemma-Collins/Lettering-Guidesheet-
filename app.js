@@ -257,13 +257,13 @@
     return lines;
   }
 
-  // Draws the logo + spec record into the bottom margin. Unconditional — there is
-  // no setting to hide this, by design.
+  // Draws the spec record (bottom-left) and logo (bottom-right) into the bottom
+  // margin. Unconditional — there is no setting to hide either, by design.
   function drawFooterBranding() {
     var marginBPx = mm2px(state.marginTB);
     if (marginBPx < mm2px(8)) return; // too little room to fit without clashing with guides
 
-    var logoX = mm2px(5);
+    var textX = mm2px(5);
     var bottomY = canvas.height - mm2px(3);
     var logoW = 0;
 
@@ -272,11 +272,11 @@
     if (logoLoaded && logoImg.naturalHeight > 0) {
       var logoH = mm2px(7);
       logoW = logoImg.naturalWidth * (logoH / logoImg.naturalHeight);
+      var logoX = canvas.width - mm2px(5) - logoW;
       ctx.drawImage(logoImg, logoX, bottomY - logoH, logoW, logoH);
     }
 
-    var textX = logoW > 0 ? logoX + logoW + mm2px(4) : logoX;
-    var maxWidth = canvas.width - mm2px(state.marginLR) - textX;
+    var maxWidth = canvas.width - mm2px(5) - textX - (logoW > 0 ? logoW + mm2px(4) : 0);
     if (maxWidth > mm2px(20)) {
       var fontPx = pt2px(6);
       ctx.font = fontPx + "px -apple-system, BlinkMacSystemFont, sans-serif";
