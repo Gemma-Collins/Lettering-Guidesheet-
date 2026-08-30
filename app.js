@@ -4,6 +4,16 @@
   var DPI = 150; // render resolution used for both screen preview and PDF export
   var MM_PER_IN = 25.4;
   function mm2px(mm) { return (mm / MM_PER_IN) * DPI; }
+  function pt2px(pt) { return (pt / 72) * DPI; }
+
+  // Branding: always drawn bottom-left, baked into the canvas (and so the exported
+  // PDF) with no UI control to hide it. Add a logo.png next to index.html to show it.
+  var LOGO_SRC = "logo.png";
+  var logoImg = new Image();
+  var logoLoaded = false;
+  logoImg.onload = function () { logoLoaded = true; render(); };
+  logoImg.onerror = function () { logoLoaded = false; };
+  logoImg.src = LOGO_SRC;
 
   var PAPER_MM = {
     letter: { w: 215.9, h: 279.4 },
@@ -17,10 +27,10 @@
       showSlant: false,
       slantAngle: 55,
       lines: [
-        { name: "Ascender",  offset: 14, style: "dashed", color: "#2f6fed", thickness: 0.3 },
-        { name: "Waistline", offset: 7,  style: "dashed", color: "#2f6fed", thickness: 0.3 },
-        { name: "Baseline",  offset: 0,  style: "solid",  color: "#2f6fed", thickness: 0.5 },
-        { name: "Descender", offset: -7, style: "dashed", color: "#2f6fed", thickness: 0.3 }
+        { name: "Ascender",  offset: 14, style: "dashed", color: "#2f6fed", thickness: 1 },
+        { name: "Waistline", offset: 7,  style: "dashed", color: "#2f6fed", thickness: 1 },
+        { name: "Baseline",  offset: 0,  style: "solid",  color: "#2f6fed", thickness: 1.5 },
+        { name: "Descender", offset: -7, style: "dashed", color: "#2f6fed", thickness: 1 }
       ]
     },
     copperplate: {
@@ -28,8 +38,8 @@
       showSlant: true,
       slantAngle: 55,
       lines: [
-        { name: "Waistline", offset: 6, style: "dashed", color: "#2f6fed", thickness: 0.3 },
-        { name: "Baseline",  offset: 0, style: "solid",  color: "#2f6fed", thickness: 0.5 }
+        { name: "Waistline", offset: 6, style: "dashed", color: "#2f6fed", thickness: 1 },
+        { name: "Baseline",  offset: 0, style: "solid",  color: "#2f6fed", thickness: 1.5 }
       ]
     },
     simple: {
@@ -37,7 +47,7 @@
       showSlant: false,
       slantAngle: 55,
       lines: [
-        { name: "Baseline", offset: 0, style: "solid", color: "#2f6fed", thickness: 0.5 }
+        { name: "Baseline", offset: 0, style: "solid", color: "#2f6fed", thickness: 1.5 }
       ]
     }
   };
@@ -64,7 +74,7 @@
     slantSpacing: 12,
     slantStyle: "dashed",
     slantColor: "#9aa3af",
-    slantThickness: 0.3,
+    slantThickness: 1,
 
     showPhoto: false,
     photo: {
@@ -108,11 +118,11 @@
   }
 
   // ---------- drawing ----------
-  function drawHLine(y, x, w, color, style, thicknessMm) {
+  function drawHLine(y, x, w, color, style, thicknessPt) {
     if (y < -1 || y > canvas.height + 1) return;
     ctx.save();
     ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(0.6, mm2px(thicknessMm));
+    ctx.lineWidth = Math.max(0.6, pt2px(thicknessPt));
     if (style === "dashed") ctx.setLineDash([mm2px(2), mm2px(1.2)]);
     else ctx.setLineDash([]);
     ctx.beginPath();
@@ -149,7 +159,7 @@
       var dxTotal = drawH / Math.tan(angleRad);
       var spacingPx = mm2px(state.slantSpacing);
       ctx.strokeStyle = state.slantColor;
-      ctx.lineWidth = Math.max(0.6, mm2px(state.slantThickness));
+      ctx.lineWidth = Math.max(0.6, pt2px(state.slantThickness));
       if (state.slantStyle === "dashed") ctx.setLineDash([mm2px(2), mm2px(1.2)]);
       else ctx.setLineDash([]);
       var startX = drawX - Math.abs(dxTotal) - spacingPx;
@@ -203,6 +213,86 @@
     ctx.restore();
   }
 
+  // Builds a short record of the current sheet's specs, so a printed/exported
+  // page carries its own settings for later reference.
+  function buildSpecSegments() {
+    var mm = pageSizeMM();
+    var segments = [];
+    segments.push(
+      mm.w.toFixed(0) + "×" + mm.h.toFixed(0) + "mm " + state.orientation +
+      ", margins " + state.marginLR + "/" + state.marginTB + "mm, repeat " + state.unitHeight + "mm"
+    );
+    state.lines.forEach(function (l) {
+      segments.push(
+        l.name + " " + (l.offset >= 0 ? "+" : "") + l.offset + "mm " + l.style + " " + l.thickness + "pt"
+      );
+    });
+    if (state.showSlant) {
+      segments.push("Slant " + state.slantAngle + "° every " + state.slantSpacing + "mm " + state.slantStyle + " " + state.slantThickness + "pt");
+    } else {
+      segments.push("Slant off");
+    }
+    if (state.showPhoto && state.photo.img) {
+      segments.push("Background photo on (" + state.photo.opacity + "% opacity)");
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    segments.push("Generated " + today);
+    return segments;
+  }
+
+  function wrapSegments(maxWidth) {
+    var segments = buildSpecSegments();
+    var lines = [];
+    var current = "";
+    segments.forEach(function (seg) {
+      var candidate = current ? current + "   ·   " + seg : seg;
+      if (current && ctx.measureText(candidate).width > maxWidth) {
+        lines.push(current);
+        current = seg;
+      } else {
+        current = candidate;
+      }
+    });
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  // Draws the logo + spec record into the bottom margin. Unconditional — there is
+  // no setting to hide this, by design.
+  function drawFooterBranding() {
+    var marginBPx = mm2px(state.marginTB);
+    if (marginBPx < mm2px(8)) return; // too little room to fit without clashing with guides
+
+    var logoX = mm2px(5);
+    var bottomY = canvas.height - mm2px(3);
+    var logoW = 0;
+
+    ctx.save();
+
+    if (logoLoaded && logoImg.naturalHeight > 0) {
+      var logoH = mm2px(7);
+      logoW = logoImg.naturalWidth * (logoH / logoImg.naturalHeight);
+      ctx.drawImage(logoImg, logoX, bottomY - logoH, logoW, logoH);
+    }
+
+    var textX = logoW > 0 ? logoX + logoW + mm2px(4) : logoX;
+    var maxWidth = canvas.width - mm2px(state.marginLR) - textX;
+    if (maxWidth > mm2px(20)) {
+      var fontPx = pt2px(6);
+      ctx.font = fontPx + "px -apple-system, BlinkMacSystemFont, sans-serif";
+      ctx.fillStyle = "#9aa3af";
+      ctx.textBaseline = "alphabetic";
+      var lines = wrapSegments(maxWidth);
+      var lineHeight = fontPx * 1.35;
+      var startY = bottomY - (lines.length - 1) * lineHeight;
+      for (var i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], textX, startY + i * lineHeight);
+      }
+    }
+
+    ctx.restore();
+  }
+
   function render() {
     layoutCanvas();
     ctx.fillStyle = "#ffffff";
@@ -210,6 +300,7 @@
 
     if (state.showPhoto) drawPhoto();
     drawGuideLines();
+    drawFooterBranding();
 
     var mm = pageSizeMM();
     el.pageInfo.textContent =
@@ -250,7 +341,7 @@
         render();
       });
       thicknessInput.addEventListener("input", function () {
-        line.thickness = parseFloat(thicknessInput.value) || 0.3;
+        line.thickness = parseFloat(thicknessInput.value) || 1;
         render();
       });
       deleteBtn.addEventListener("click", function () {
@@ -270,7 +361,7 @@
       offset: 0,
       style: "solid",
       color: "#2f6fed",
-      thickness: 0.3
+      thickness: 1
     });
     renderLinesList();
     render();
@@ -308,7 +399,7 @@
     render();
   });
   el.slantThickness.addEventListener("input", function () {
-    state.slantThickness = parseFloat(this.value) || 0.3;
+    state.slantThickness = parseFloat(this.value) || 1;
     render();
   });
   el.slantAngle.addEventListener("input", function () {
