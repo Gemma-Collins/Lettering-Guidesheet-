@@ -65,16 +65,25 @@
           <input type="file" id="photoInput" accept="image/*">
         </div>
         <div class="field">
-          <label for="photoOpacity">Photo opacity</label>
-          <input type="range" id="photoOpacity" min="5" max="100" value="60">
+          <label for="photoOpacity">Photo opacity (%)</label>
+          <div class="slider-with-number">
+            <input type="range" id="photoOpacity" min="5" max="100" value="60">
+            <input type="number" id="photoOpacityNum" min="5" max="100" value="60">
+          </div>
         </div>
         <div class="field">
-          <label for="photoScale">Photo scale</label>
-          <input type="range" id="photoScale" min="10" max="300" value="100">
+          <label for="photoScale">Photo scale (0 = original size)</label>
+          <div class="slider-with-number">
+            <input type="range" id="photoScale" min="-10" max="10" value="0">
+            <input type="number" id="photoScaleNum" min="-10" max="10" value="0">
+          </div>
         </div>
         <div class="field">
           <label for="photoRotation">Photo rotation (°)</label>
-          <input type="range" id="photoRotation" min="-180" max="180" value="0">
+          <div class="slider-with-number">
+            <input type="range" id="photoRotation" min="0" max="360" value="0">
+            <input type="number" id="photoRotationNum" min="0" max="360" value="0">
+          </div>
         </div>
         <button class="btn secondary" id="fitPhotoBtn" type="button">Fit &amp; Center Photo</button>
         <p class="hint">Drag the photo on the preview to reposition it. Guide lines are always drawn on top for tracing.</p>
