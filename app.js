@@ -96,7 +96,9 @@
   var el = {};
   [
     "paperSize", "orientation", "marginLR", "marginTB", "pageCount",
-    "showPhoto", "photoInput", "photoOpacity", "photoScale", "photoRotation", "fitPhotoBtn",
+    "showPhoto", "photoInput",
+    "photoOpacity", "photoOpacityNum", "photoScale", "photoScaleNum", "photoRotation", "photoRotationNum",
+    "fitPhotoBtn",
     "preset", "unitHeight", "linesList", "addLineBtn",
     "showSlant", "slantAngle", "slantAngleOut", "slantSpacing", "slantStyle", "slantColor", "slantThickness",
     "downloadBtn", "pageInfo"
@@ -453,16 +455,43 @@
     reader.readAsDataURL(file);
   });
 
-  el.photoOpacity.addEventListener("input", function () {
-    state.photo.opacity = parseInt(this.value, 10);
+  // Keeps a range input and a number input showing the same value in sync, so
+  // either one can be dragged or typed into.
+  function linkRangeAndNumber(rangeEl, numberEl, onChange) {
+    function apply(value) {
+      rangeEl.value = value;
+      numberEl.value = value;
+      onChange(value);
+    }
+    rangeEl.addEventListener("input", function () {
+      apply(parseFloat(this.value));
+    });
+    numberEl.addEventListener("input", function () {
+      var v = parseFloat(this.value);
+      if (isNaN(v)) return;
+      var min = parseFloat(rangeEl.min), max = parseFloat(rangeEl.max);
+      if (v < min) v = min;
+      if (v > max) v = max;
+      apply(v);
+    });
+  }
+
+  // Photo scale is shown to the user as a signed "zoom" number (-10..10):
+  // 0 = original size, +10 = double size, -10 = shrunk to nothing. Internally
+  // it's still stored/rendered as a percentage.
+  function scalePctFromUI(uiVal) { return 100 + uiVal * 10; }
+  function scaleUIFromPct(pct) { return Math.max(-10, Math.min(10, Math.round((pct - 100) / 10))); }
+
+  linkRangeAndNumber(el.photoOpacity, el.photoOpacityNum, function (v) {
+    state.photo.opacity = v;
     render();
   });
-  el.photoScale.addEventListener("input", function () {
-    state.photo.scale = parseInt(this.value, 10);
+  linkRangeAndNumber(el.photoScale, el.photoScaleNum, function (v) {
+    state.photo.scale = scalePctFromUI(v);
     render();
   });
-  el.photoRotation.addEventListener("input", function () {
-    state.photo.rotation = parseInt(this.value, 10);
+  linkRangeAndNumber(el.photoRotation, el.photoRotationNum, function (v) {
+    state.photo.rotation = v;
     render();
   });
 
@@ -475,12 +504,15 @@
     var drawW = mm2px(mm.w) - marginL * 2;
     var drawH = mm2px(mm.h) - marginT * 2;
     var scale = Math.min(drawW / p.img.width, drawH / p.img.height) * 100;
-    p.scale = Math.max(10, Math.min(300, Math.round(scale)));
+    var uiScale = scaleUIFromPct(scale);
+    p.scale = scalePctFromUI(uiScale);
     p.rotation = 0;
     p.x = 0;
     p.y = 0;
-    el.photoScale.value = p.scale;
+    el.photoScale.value = uiScale;
+    el.photoScaleNum.value = uiScale;
     el.photoRotation.value = 0;
+    el.photoRotationNum.value = 0;
   }
 
   el.fitPhotoBtn.addEventListener("click", function () {

@@ -102,6 +102,28 @@ body {
   width: 100%;
 }
 
+.slider-with-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-with-number input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.slider-with-number input[type="number"] {
+  width: 62px;
+  flex: none;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  background: #fff;
+  color: var(--ink);
+}
+
 .field input[type="color"] {
   width: 100%;
   height: 34px;
