@@ -6,9 +6,11 @@
   function mm2px(mm) { return (mm / MM_PER_IN) * DPI; }
   function pt2px(pt) { return (pt / 72) * DPI; }
 
-  // Branding: always drawn bottom-left, baked into the canvas (and so the exported
+  // Branding: always drawn bottom-right, baked into the canvas (and so the exported
   // PDF) with no UI control to hide it. Add a logo.png next to index.html to show it.
+  // Edit COPYRIGHT_TEXT below if "Gems Lettering" isn't the right name/wording.
   var LOGO_SRC = "logo.png";
+  var COPYRIGHT_TEXT = "© " + new Date().getFullYear() + " Gems Lettering";
   var logoImg = new Image();
   var logoLoaded = false;
   logoImg.onload = function () { logoLoaded = true; render(); };
@@ -257,31 +259,38 @@
     return lines;
   }
 
-  // Draws the spec record (bottom-left) and logo (bottom-right) into the bottom
-  // margin. Unconditional — there is no setting to hide either, by design.
+  // Draws the spec record (bottom-left) and logo + copyright line (bottom-right,
+  // stacked) into the bottom margin. Unconditional — no setting hides any of it.
   function drawFooterBranding() {
     var marginBPx = mm2px(state.marginTB);
     if (marginBPx < mm2px(8)) return; // too little room to fit without clashing with guides
 
     var textX = mm2px(5);
     var bottomY = canvas.height - mm2px(3);
-    var logoW = 0;
+    var rightEdge = canvas.width - mm2px(5);
+    var fontPx = pt2px(6);
 
     ctx.save();
+    ctx.font = fontPx + "px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillStyle = "#9aa3af";
+    ctx.textBaseline = "alphabetic";
 
+    var logoW = 0, logoH = 0;
     if (logoLoaded && logoImg.naturalHeight > 0) {
-      var logoH = mm2px(7);
+      logoH = mm2px(7);
       logoW = logoImg.naturalWidth * (logoH / logoImg.naturalHeight);
-      var logoX = canvas.width - mm2px(5) - logoW;
-      ctx.drawImage(logoImg, logoX, bottomY - logoH, logoW, logoH);
+      ctx.drawImage(logoImg, rightEdge - logoW, bottomY - logoH, logoW, logoH);
     }
 
-    var maxWidth = canvas.width - mm2px(5) - textX - (logoW > 0 ? logoW + mm2px(4) : 0);
+    var copyrightWidth = ctx.measureText(COPYRIGHT_TEXT).width;
+    ctx.textAlign = "right";
+    var copyrightY = logoH > 0 ? bottomY - logoH - mm2px(1.5) : bottomY;
+    ctx.fillText(COPYRIGHT_TEXT, rightEdge, copyrightY);
+    ctx.textAlign = "left";
+
+    var reservedRight = Math.max(logoW, copyrightWidth);
+    var maxWidth = rightEdge - mm2px(4) - reservedRight - textX;
     if (maxWidth > mm2px(20)) {
-      var fontPx = pt2px(6);
-      ctx.font = fontPx + "px -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillStyle = "#9aa3af";
-      ctx.textBaseline = "alphabetic";
       var lines = wrapSegments(maxWidth);
       var lineHeight = fontPx * 1.35;
       var startY = bottomY - (lines.length - 1) * lineHeight;
