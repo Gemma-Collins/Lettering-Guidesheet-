@@ -4,6 +4,18 @@
   var DPI = 150; // render resolution used for both screen preview and PDF export
   var MM_PER_IN = 25.4;
   function mm2px(mm) { return (mm / MM_PER_IN) * DPI; }
+  function pt2px(pt) { return (pt / 72) * DPI; }
+
+  // Branding: always drawn bottom-right, baked into the canvas (and so the exported
+  // PDF) with no UI control to hide it. Add a logo.png next to index.html to show it.
+  // Edit COPYRIGHT_TEXT below if "Gems Lettering" isn't the right name/wording.
+  var LOGO_SRC = "logo.png";
+  var COPYRIGHT_TEXT = "© " + new Date().getFullYear() + " Gems Lettering";
+  var logoImg = new Image();
+  var logoLoaded = false;
+  logoImg.onload = function () { logoLoaded = true; render(); };
+  logoImg.onerror = function () { logoLoaded = false; };
+  logoImg.src = LOGO_SRC;
 
   var PAPER_MM = {
     letter: { w: 215.9, h: 279.4 },
@@ -12,43 +24,68 @@
   };
 
   var PRESETS = {
-    broadedge:   { xHeight: 7, ascenderHeight: 7, descenderHeight: 7, showAscender: true,  showWaist: true, showBaseline: true, showDescender: true,  showSlant: false, slantAngle: 55 },
-    copperplate: { xHeight: 6, ascenderHeight: 10, descenderHeight: 10, showAscender: false, showWaist: true, showBaseline: true, showDescender: false, showSlant: true,  slantAngle: 55 },
-    simple:      { xHeight: 8, ascenderHeight: 0, descenderHeight: 0, showAscender: false, showWaist: false, showBaseline: true, showDescender: false, showSlant: false, slantAngle: 55 }
+    broadedge: {
+      unitHeight: 24,
+      showSlant: false,
+      slantAngle: 55,
+      lines: [
+        { name: "Ascender",  offset: 14, style: "dashed", color: "#2f6fed", thickness: 1 },
+        { name: "Waistline", offset: 7,  style: "dashed", color: "#2f6fed", thickness: 1 },
+        { name: "Baseline",  offset: 0,  style: "solid",  color: "#2f6fed", thickness: 1.5 },
+        { name: "Descender", offset: -7, style: "dashed", color: "#2f6fed", thickness: 1 }
+      ]
+    },
+    copperplate: {
+      unitHeight: 26,
+      showSlant: true,
+      slantAngle: 55,
+      lines: [
+        { name: "Waistline", offset: 6, style: "dashed", color: "#2f6fed", thickness: 1 },
+        { name: "Baseline",  offset: 0, style: "solid",  color: "#2f6fed", thickness: 1.5 }
+      ]
+    },
+    simple: {
+      unitHeight: 20,
+      showSlant: false,
+      slantAngle: 55,
+      lines: [
+        { name: "Baseline", offset: 0, style: "solid", color: "#2f6fed", thickness: 1.5 }
+      ]
+    }
   };
 
+  var nextLineId = 1;
+  function withIds(lines) {
+    return lines.map(function (l) {
+      return Object.assign({ id: nextLineId++ }, l);
+    });
+  }
+
   var state = {
-    mode: "scratch",
     paperSize: "a4",
     orientation: "portrait",
     marginLR: 15,
     marginTB: 15,
+    pageCount: 1,
 
-    xHeight: 7,
-    ascenderHeight: 7,
-    descenderHeight: 7,
-    setSpacing: 10,
-    showAscender: true,
-    showWaist: true,
-    showBaseline: true,
-    showDescender: true,
+    unitHeight: 24,
+    lines: withIds(PRESETS.broadedge.lines),
 
     showSlant: false,
     slantAngle: 55,
     slantSpacing: 12,
-
-    lineColor: "#2f6fed",
+    slantStyle: "dashed",
     slantColor: "#9aa3af",
-    pageCount: 1,
+    slantThickness: 1,
 
+    showPhoto: false,
     photo: {
       img: null,
       opacity: 60,
       scale: 100,
       rotation: 0,
-      x: 0, // px offset from canvas center, in canvas pixel space
-      y: 0,
-      showGuides: true
+      x: 0,
+      y: 0
     }
   };
 
@@ -58,17 +95,14 @@
   // ---------- element refs ----------
   var el = {};
   [
-    "paperSize", "orientation", "marginLR", "marginTB",
-    "preset", "xHeight", "setSpacing", "ascenderHeight", "descenderHeight",
-    "showAscender", "showWaist", "showBaseline", "showDescender",
-    "showSlant", "slantAngle", "slantAngleOut", "slantSpacing",
-    "lineColor", "slantColor", "pageCount",
-    "photoInput", "photoOpacity", "photoScale", "photoRotation",
-    "fitPhotoBtn", "photoShowGuides",
-    "downloadBtn", "pageInfo", "scratchPanel", "photoPanel"
+    "paperSize", "orientation", "marginLR", "marginTB", "pageCount",
+    "showPhoto", "photoInput", "photoOpacity", "photoScale", "photoRotation", "fitPhotoBtn",
+    "preset", "unitHeight", "linesList", "addLineBtn",
+    "showSlant", "slantAngle", "slantAngleOut", "slantSpacing", "slantStyle", "slantColor", "slantThickness",
+    "downloadBtn", "pageInfo"
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
-  var modeButtons = document.querySelectorAll(".mode-btn");
+  var lineRowTemplate = document.getElementById("lineRowTemplate");
 
   // ---------- geometry ----------
   function pageSizeMM() {
@@ -86,6 +120,20 @@
   }
 
   // ---------- drawing ----------
+  function drawHLine(y, x, w, color, style, thicknessPt) {
+    if (y < -1 || y > canvas.height + 1) return;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(0.6, pt2px(thicknessPt));
+    if (style === "dashed") ctx.setLineDash([mm2px(2), mm2px(1.2)]);
+    else ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawGuideLines() {
     var mm = pageSizeMM();
     var marginL = mm2px(state.marginLR);
@@ -113,7 +161,9 @@
       var dxTotal = drawH / Math.tan(angleRad);
       var spacingPx = mm2px(state.slantSpacing);
       ctx.strokeStyle = state.slantColor;
-      ctx.lineWidth = Math.max(1, DPI / 150);
+      ctx.lineWidth = Math.max(0.6, pt2px(state.slantThickness));
+      if (state.slantStyle === "dashed") ctx.setLineDash([mm2px(2), mm2px(1.2)]);
+      else ctx.setLineDash([]);
       var startX = drawX - Math.abs(dxTotal) - spacingPx;
       var endX = drawX + drawW + Math.abs(dxTotal) + spacingPx;
       for (var x0 = startX; x0 <= endX; x0 += spacingPx) {
@@ -122,55 +172,30 @@
         ctx.lineTo(x0 + dxTotal, drawY);
         ctx.stroke();
       }
+      ctx.setLineDash([]);
     }
 
-    // horizontal rule sets
-    var xHeightPx = mm2px(state.xHeight);
-    var ascPx = mm2px(state.ascenderHeight);
-    var descPx = mm2px(state.descenderHeight);
-    var setSpacingPx = mm2px(state.setSpacing);
+    // horizontal rule sets, built from the user's custom line list
+    if (state.lines.length > 0) {
+      var unitHeightPx = mm2px(Math.max(1, state.unitHeight));
+      var maxAbove = 0, maxBelow = 0;
+      state.lines.forEach(function (l) {
+        if (l.offset > maxAbove) maxAbove = l.offset;
+        if (-l.offset > maxBelow) maxBelow = -l.offset;
+      });
+      var maxAbovePx = mm2px(maxAbove);
+      var maxBelowPx = mm2px(maxBelow);
 
-    var setHeight = ascPx + xHeightPx + descPx;
-    var step = setHeight + setSpacingPx;
-    if (step <= 0) step = xHeightPx || 20;
-
-    ctx.lineWidth = Math.max(1.2, DPI / 130);
-
-    var baselineY = drawY + ascPx + xHeightPx;
-    while (baselineY - descPx <= drawY + drawH + 1) {
-      var ascenderY = baselineY - xHeightPx - ascPx;
-      var waistY = baselineY - xHeightPx;
-      var descenderY = baselineY + descPx;
-
-      if (state.showAscender && ascPx > 0 && ascenderY >= drawY - 1) {
-        drawHLine(ascenderY, drawX, drawW, state.lineColor, true);
+      var baselineY = drawY + maxAbovePx;
+      while (baselineY - maxBelowPx <= drawY + drawH + 1) {
+        state.lines.forEach(function (l) {
+          var y = baselineY - mm2px(l.offset);
+          drawHLine(y, drawX, drawW, l.color, l.style, l.thickness);
+        });
+        baselineY += unitHeightPx;
       }
-      if (state.showWaist && waistY >= drawY - 1) {
-        drawHLine(waistY, drawX, drawW, state.lineColor, true);
-      }
-      if (state.showBaseline) {
-        drawHLine(baselineY, drawX, drawW, state.lineColor, false);
-      }
-      if (state.showDescender && descPx > 0) {
-        drawHLine(descenderY, drawX, drawW, state.lineColor, true);
-      }
-
-      baselineY += step;
     }
 
-    ctx.restore();
-  }
-
-  function drawHLine(y, x, w, color, dashed) {
-    if (y < 0 || y > canvas.height) return;
-    ctx.save();
-    ctx.strokeStyle = color;
-    if (dashed) ctx.setLineDash([mm2px(2), mm2px(1.2)]);
-    else ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w, y);
-    ctx.stroke();
     ctx.restore();
   }
 
@@ -190,36 +215,165 @@
     ctx.restore();
   }
 
+  // Builds a short record of the current sheet's specs, so a printed/exported
+  // page carries its own settings for later reference.
+  function buildSpecSegments() {
+    var mm = pageSizeMM();
+    var segments = [];
+    segments.push(
+      mm.w.toFixed(0) + "×" + mm.h.toFixed(0) + "mm " + state.orientation +
+      ", margins " + state.marginLR + "/" + state.marginTB + "mm, repeat " + state.unitHeight + "mm"
+    );
+    state.lines.forEach(function (l) {
+      segments.push(
+        l.name + " " + (l.offset >= 0 ? "+" : "") + l.offset + "mm " + l.style + " " + l.thickness + "pt"
+      );
+    });
+    if (state.showSlant) {
+      segments.push("Slant " + state.slantAngle + "° every " + state.slantSpacing + "mm " + state.slantStyle + " " + state.slantThickness + "pt");
+    } else {
+      segments.push("Slant off");
+    }
+    if (state.showPhoto && state.photo.img) {
+      segments.push("Background photo on (" + state.photo.opacity + "% opacity)");
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    segments.push("Generated " + today);
+    return segments;
+  }
+
+  function wrapSegments(maxWidth) {
+    var segments = buildSpecSegments();
+    var lines = [];
+    var current = "";
+    segments.forEach(function (seg) {
+      var candidate = current ? current + "   ·   " + seg : seg;
+      if (current && ctx.measureText(candidate).width > maxWidth) {
+        lines.push(current);
+        current = seg;
+      } else {
+        current = candidate;
+      }
+    });
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  // Draws the spec record + copyright line (bottom-left, stacked) and logo
+  // (bottom-right) into the bottom margin. Unconditional — no setting hides any of it.
+  function drawFooterBranding() {
+    var marginBPx = mm2px(state.marginTB);
+    if (marginBPx < mm2px(8)) return; // too little room to fit without clashing with guides
+
+    var textX = mm2px(5);
+    var bottomY = canvas.height - mm2px(3);
+    var rightEdge = canvas.width - mm2px(5);
+    var fontPx = pt2px(6);
+
+    ctx.save();
+    ctx.font = fontPx + "px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillStyle = "#9aa3af";
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+
+    var logoW = 0, logoH = 0;
+    if (logoLoaded && logoImg.naturalHeight > 0) {
+      logoH = mm2px(7);
+      logoW = logoImg.naturalWidth * (logoH / logoImg.naturalHeight);
+      ctx.drawImage(logoImg, rightEdge - logoW, bottomY - logoH, logoW, logoH);
+    }
+
+    var maxWidth = rightEdge - (logoW > 0 ? logoW + mm2px(4) : 0) - textX;
+    if (maxWidth > mm2px(20)) {
+      var lines = wrapSegments(maxWidth).concat([COPYRIGHT_TEXT]);
+      var lineHeight = fontPx * 1.35;
+      var startY = bottomY - (lines.length - 1) * lineHeight;
+      for (var i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], textX, startY + i * lineHeight);
+      }
+    }
+
+    ctx.restore();
+  }
+
   function render() {
     layoutCanvas();
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (state.mode === "photo") {
-      drawPhoto();
-      if (state.photo.showGuides) drawGuideLines();
-    } else {
-      drawGuideLines();
-    }
+    if (state.showPhoto) drawPhoto();
+    drawGuideLines();
+    drawFooterBranding();
 
     var mm = pageSizeMM();
     el.pageInfo.textContent =
-      (state.mode === "scratch"
-        ? "Preview — page 1 of " + state.pageCount
-        : "Preview — photo tracing sheet") +
+      "Preview — page 1 of " + state.pageCount +
       " · " + mm.w.toFixed(0) + " × " + mm.h.toFixed(0) + " mm";
   }
+
+  // ---------- lines list UI ----------
+  function renderLinesList() {
+    el.linesList.innerHTML = "";
+    state.lines.forEach(function (line) {
+      var frag = lineRowTemplate.content.cloneNode(true);
+      var row = frag.querySelector(".line-row");
+      var nameInput = row.querySelector(".line-name");
+      var offsetInput = row.querySelector(".line-offset");
+      var styleSelect = row.querySelector(".line-style");
+      var colorInput = row.querySelector(".line-color");
+      var thicknessInput = row.querySelector(".line-thickness");
+      var deleteBtn = row.querySelector(".line-delete");
+
+      nameInput.value = line.name;
+      offsetInput.value = line.offset;
+      styleSelect.value = line.style;
+      colorInput.value = line.color;
+      thicknessInput.value = line.thickness;
+
+      nameInput.addEventListener("input", function () { line.name = nameInput.value; });
+      offsetInput.addEventListener("input", function () {
+        line.offset = parseFloat(offsetInput.value) || 0;
+        render();
+      });
+      styleSelect.addEventListener("change", function () {
+        line.style = styleSelect.value;
+        render();
+      });
+      colorInput.addEventListener("input", function () {
+        line.color = colorInput.value;
+        render();
+      });
+      thicknessInput.addEventListener("input", function () {
+        line.thickness = parseFloat(thicknessInput.value) || 1;
+        render();
+      });
+      deleteBtn.addEventListener("click", function () {
+        state.lines = state.lines.filter(function (l) { return l.id !== line.id; });
+        renderLinesList();
+        render();
+      });
+
+      el.linesList.appendChild(row);
+    });
+  }
+
+  el.addLineBtn.addEventListener("click", function () {
+    state.lines.push({
+      id: nextLineId++,
+      name: "New line",
+      offset: 0,
+      style: "solid",
+      color: "#2f6fed",
+      thickness: 1
+    });
+    renderLinesList();
+    render();
+  });
 
   // ---------- UI wiring ----------
   function bindNumber(id, key, isFloat) {
     el[id].addEventListener("input", function () {
       state[key] = isFloat ? parseFloat(this.value) || 0 : parseInt(this.value, 10) || 0;
-      render();
-    });
-  }
-  function bindCheckbox(id, key) {
-    el[id].addEventListener("change", function () {
-      state[key] = this.checked;
       render();
     });
   }
@@ -234,69 +388,51 @@
   bindSelect("orientation", "orientation");
   bindNumber("marginLR", "marginLR", true);
   bindNumber("marginTB", "marginTB", true);
-
-  bindNumber("xHeight", "xHeight", true);
-  bindNumber("setSpacing", "setSpacing", true);
-  bindNumber("ascenderHeight", "ascenderHeight", true);
-  bindNumber("descenderHeight", "descenderHeight", true);
-  bindCheckbox("showAscender", "showAscender");
-  bindCheckbox("showWaist", "showWaist");
-  bindCheckbox("showBaseline", "showBaseline");
-  bindCheckbox("showDescender", "showDescender");
-
-  bindCheckbox("showSlant", "showSlant");
-  bindNumber("slantSpacing", "slantSpacing", true);
   bindNumber("pageCount", "pageCount", false);
+  bindNumber("unitHeight", "unitHeight", true);
 
+  el.showSlant.addEventListener("change", function () {
+    state.showSlant = this.checked;
+    render();
+  });
+  bindNumber("slantSpacing", "slantSpacing", true);
+  bindSelect("slantStyle", "slantStyle");
+  el.slantColor.addEventListener("input", function () {
+    state.slantColor = this.value;
+    render();
+  });
+  el.slantThickness.addEventListener("input", function () {
+    state.slantThickness = parseFloat(this.value) || 1;
+    render();
+  });
   el.slantAngle.addEventListener("input", function () {
     state.slantAngle = parseInt(this.value, 10);
     el.slantAngleOut.textContent = state.slantAngle + "°";
     render();
   });
 
-  el.lineColor.addEventListener("input", function () {
-    state.lineColor = this.value;
-    render();
-  });
-  el.slantColor.addEventListener("input", function () {
-    state.slantColor = this.value;
-    render();
-  });
-
   el.preset.addEventListener("change", function () {
     var p = PRESETS[this.value];
     if (!p) return;
-    Object.assign(state, p);
-    el.xHeight.value = state.xHeight;
-    el.ascenderHeight.value = state.ascenderHeight;
-    el.descenderHeight.value = state.descenderHeight;
-    el.showAscender.checked = state.showAscender;
-    el.showWaist.checked = state.showWaist;
-    el.showBaseline.checked = state.showBaseline;
-    el.showDescender.checked = state.showDescender;
+    state.unitHeight = p.unitHeight;
+    state.showSlant = p.showSlant;
+    state.slantAngle = p.slantAngle;
+    state.lines = withIds(p.lines);
+
+    el.unitHeight.value = state.unitHeight;
     el.showSlant.checked = state.showSlant;
     el.slantAngle.value = state.slantAngle;
     el.slantAngleOut.textContent = state.slantAngle + "°";
+    renderLinesList();
     render();
   });
 
-  // mode switch
-  modeButtons.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      modeButtons.forEach(function (b) {
-        b.classList.remove("active");
-        b.setAttribute("aria-selected", "false");
-      });
-      btn.classList.add("active");
-      btn.setAttribute("aria-selected", "true");
-      state.mode = btn.dataset.mode;
-      el.scratchPanel.classList.toggle("hidden", state.mode !== "scratch");
-      el.photoPanel.classList.toggle("hidden", state.mode !== "photo");
-      render();
-    });
+  // photo toggle + upload
+  el.showPhoto.addEventListener("change", function () {
+    state.showPhoto = this.checked;
+    render();
   });
 
-  // photo upload
   el.photoInput.addEventListener("change", function (e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -307,6 +443,8 @@
         state.photo.img = img;
         state.photo.x = 0;
         state.photo.y = 0;
+        state.showPhoto = true;
+        el.showPhoto.checked = true;
         fitPhoto();
         render();
       };
@@ -325,10 +463,6 @@
   });
   el.photoRotation.addEventListener("input", function () {
     state.photo.rotation = parseInt(this.value, 10);
-    render();
-  });
-  el.photoShowGuides.addEventListener("change", function () {
-    state.photo.showGuides = this.checked;
     render();
   });
 
@@ -356,7 +490,7 @@
 
   // drag photo on canvas
   var dragging = false;
-  var dragStart = { x: 0, y: 0, px: 0, py: 0 };
+  var dragStart = { x: 0, y: 0, px: 0, py: 0, f: 1 };
 
   function canvasScaleFactor() {
     var rect = canvas.getBoundingClientRect();
@@ -364,14 +498,13 @@
   }
 
   canvas.addEventListener("pointerdown", function (e) {
-    if (state.mode !== "photo" || !state.photo.img) return;
+    if (!state.showPhoto || !state.photo.img) return;
     dragging = true;
-    var f = canvasScaleFactor();
     dragStart.x = e.clientX;
     dragStart.y = e.clientY;
     dragStart.px = state.photo.x;
     dragStart.py = state.photo.y;
-    dragStart.f = f;
+    dragStart.f = canvasScaleFactor();
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener("pointermove", function (e) {
@@ -404,21 +537,17 @@
     var dataUrl = canvas.toDataURL("image/png", 1.0);
     doc.addImage(dataUrl, "PNG", 0, 0, mm.w, mm.h);
 
-    if (state.mode === "scratch") {
-      var count = Math.max(1, Math.min(30, state.pageCount || 1));
-      for (var i = 1; i < count; i++) {
-        doc.addPage([mm.w, mm.h], "portrait");
-        doc.addImage(dataUrl, "PNG", 0, 0, mm.w, mm.h);
-      }
+    var count = Math.max(1, Math.min(30, state.pageCount || 1));
+    for (var i = 1; i < count; i++) {
+      doc.addPage([mm.w, mm.h], "portrait");
+      doc.addImage(dataUrl, "PNG", 0, 0, mm.w, mm.h);
     }
 
-    var filename = state.mode === "photo"
-      ? "calligraphy-guide-photo-sheet.pdf"
-      : "calligraphy-guide-sheet.pdf";
-    doc.save(filename);
+    doc.save("calligraphy-guide-sheet.pdf");
   });
 
   // ---------- init ----------
   el.slantAngleOut.textContent = state.slantAngle + "°";
+  renderLinesList();
   render();
 })();
