@@ -259,8 +259,8 @@
     return lines;
   }
 
-  // Draws the spec record (bottom-left) and logo + copyright line (bottom-right,
-  // stacked) into the bottom margin. Unconditional — no setting hides any of it.
+  // Draws the spec record + copyright line (bottom-left, stacked) and logo
+  // (bottom-right) into the bottom margin. Unconditional — no setting hides any of it.
   function drawFooterBranding() {
     var marginBPx = mm2px(state.marginTB);
     if (marginBPx < mm2px(8)) return; // too little room to fit without clashing with guides
@@ -274,6 +274,7 @@
     ctx.font = fontPx + "px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.fillStyle = "#9aa3af";
     ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
 
     var logoW = 0, logoH = 0;
     if (logoLoaded && logoImg.naturalHeight > 0) {
@@ -282,16 +283,9 @@
       ctx.drawImage(logoImg, rightEdge - logoW, bottomY - logoH, logoW, logoH);
     }
 
-    var copyrightWidth = ctx.measureText(COPYRIGHT_TEXT).width;
-    ctx.textAlign = "right";
-    var copyrightY = logoH > 0 ? bottomY - logoH - mm2px(1.5) : bottomY;
-    ctx.fillText(COPYRIGHT_TEXT, rightEdge, copyrightY);
-    ctx.textAlign = "left";
-
-    var reservedRight = Math.max(logoW, copyrightWidth);
-    var maxWidth = rightEdge - mm2px(4) - reservedRight - textX;
+    var maxWidth = rightEdge - (logoW > 0 ? logoW + mm2px(4) : 0) - textX;
     if (maxWidth > mm2px(20)) {
-      var lines = wrapSegments(maxWidth);
+      var lines = wrapSegments(maxWidth).concat([COPYRIGHT_TEXT]);
       var lineHeight = fontPx * 1.35;
       var startY = bottomY - (lines.length - 1) * lineHeight;
       for (var i = 0; i < lines.length; i++) {
