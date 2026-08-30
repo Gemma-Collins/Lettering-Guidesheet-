@@ -49,35 +49,11 @@ body {
 }
 
 .controls {
-  flex: 0 0 320px;
-  max-width: 320px;
+  flex: 0 0 380px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.mode-switch {
-  display: flex;
-  background: var(--panel-bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.mode-btn {
-  flex: 1;
-  padding: 10px 8px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.mode-btn.active {
-  background: var(--accent);
-  color: #fff;
 }
 
 .panel {
@@ -171,6 +147,118 @@ output {
 }
 
 #photoInput { margin-top: 6px; width: 100%; font-size: 0.8rem; }
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-row span:last-child {
+  font-size: 0.85rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex: none;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+
+.switch .slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.switch input:checked + .slider {
+  background: var(--accent);
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(18px);
+}
+
+.lines-table-head {
+  display: grid;
+  grid-template-columns: 1.5fr 0.9fr 0.9fr 0.6fr 0.9fr 20px;
+  gap: 6px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  padding: 0 2px 4px;
+}
+
+.line-row {
+  display: grid;
+  grid-template-columns: 1.5fr 0.9fr 0.9fr 0.6fr 0.9fr 20px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.line-row input[type="text"],
+.line-row input[type="number"],
+.line-row select {
+  width: 100%;
+  padding: 5px 4px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 0.76rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+.line-row input[type="color"] {
+  width: 100%;
+  height: 26px;
+  padding: 1px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.line-row input[type="range"] {
+  width: 100%;
+}
+
+.line-delete {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.line-delete:hover {
+  color: #d33;
+}
 
 .hint {
   font-size: 0.78rem;
