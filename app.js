@@ -30,7 +30,7 @@
       slantAngle: 55,
       lines: [
         { name: "Ascender",  offset: 14, style: "dashed", color: "#2f6fed", thickness: 1 },
-        { name: "Waistline", offset: 7,  style: "dashed", color: "#2f6fed", thickness: 1 },
+        { name: "X-Height", offset: 7,  style: "dashed", color: "#2f6fed", thickness: 1 },
         { name: "Baseline",  offset: 0,  style: "solid",  color: "#2f6fed", thickness: 1.5 },
         { name: "Descender", offset: -7, style: "dashed", color: "#2f6fed", thickness: 1 }
       ]
