@@ -66,7 +66,6 @@
     orientation: "portrait",
     marginLR: 15,
     marginTB: 15,
-    pageCount: 1,
 
     unitHeight: 24,
     lines: withIds(PRESETS.broadedge.lines),
@@ -95,7 +94,7 @@
   // ---------- element refs ----------
   var el = {};
   [
-    "paperSize", "orientation", "marginLR", "marginTB", "pageCount",
+    "paperSize", "orientation", "marginLR", "marginTB",
     "showPhoto", "photoInput",
     "photoOpacity", "photoOpacityNum", "photoScale", "photoScaleNum", "photoRotation", "photoRotationNum",
     "fitPhotoBtn",
@@ -309,8 +308,7 @@
 
     var mm = pageSizeMM();
     el.pageInfo.textContent =
-      "Page 1 of " + state.pageCount +
-      " · " + mm.w.toFixed(0) + " × " + mm.h.toFixed(0) + " mm";
+      mm.w.toFixed(0) + " × " + mm.h.toFixed(0) + " mm";
   }
 
   // ---------- lines list UI ----------
@@ -390,7 +388,6 @@
   bindSelect("orientation", "orientation");
   bindNumber("marginLR", "marginLR", true);
   bindNumber("marginTB", "marginTB", true);
-  bindNumber("pageCount", "pageCount", false);
   bindNumber("unitHeight", "unitHeight", true);
 
   el.showSlant.addEventListener("change", function () {
@@ -568,12 +565,6 @@
 
     var dataUrl = canvas.toDataURL("image/png", 1.0);
     doc.addImage(dataUrl, "PNG", 0, 0, mm.w, mm.h);
-
-    var count = Math.max(1, Math.min(30, state.pageCount || 1));
-    for (var i = 1; i < count; i++) {
-      doc.addPage([mm.w, mm.h], "portrait");
-      doc.addImage(dataUrl, "PNG", 0, 0, mm.w, mm.h);
-    }
 
     doc.save("calligraphy-guide-sheet.pdf");
   });
