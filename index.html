@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Raleway:wght@500&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="app">
@@ -47,10 +47,6 @@
             <label for="marginTB">Top/bottom margin (mm)</label>
             <input type="number" id="marginTB" min="0" max="40" value="15">
           </div>
-        </div>
-        <div class="field">
-          <label for="pageCount">Number of pages</label>
-          <input type="number" id="pageCount" min="1" max="30" value="1">
         </div>
       </section>
 
@@ -165,10 +161,11 @@
     </aside>
 
     <main class="preview-wrap">
-      <div class="preview-toolbar">
-        <span id="pageInfo">Preview</span>
-      </div>
       <div class="canvas-shell">
+        <div class="preview-header">
+          <h2>Preview</h2>
+          <span id="pageInfo"></span>
+        </div>
         <canvas id="sheetCanvas"></canvas>
       </div>
     </main>
