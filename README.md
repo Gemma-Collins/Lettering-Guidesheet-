@@ -51,9 +51,9 @@ Check
    git status
    git diff
 Commiting
-   git add . — stages every changed file (everything you edited since the last push)
-   git commit -m "..." — saves those staged changes as a checkpoint with a message describing what changed
-   git push — uploads that commit to GitHub, which triggers GitHub Pages to redeploy automatically
+   git add .                     stages every changed file (everything you edited since the last push)
+   git commit -m "..."           saves changes locally w message
+   git push                      uploads commits to GitHub repo, triggering GitHub Pages to redeploy automatically
 
 Copy these files to your site and either:
 
