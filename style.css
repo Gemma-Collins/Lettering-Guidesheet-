@@ -12,8 +12,9 @@
 * { box-sizing: border-box; }
 
 h1, h2 {
-  font-family: "Raleway", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Playfair Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-weight: 500;
+  color: var(--accent-dark);
 }
 
 body {
@@ -74,7 +75,7 @@ body {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--muted);
+  color: var(--accent-dark);
   margin: 16px 0 10px;
 }
 
@@ -336,7 +337,7 @@ output {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--muted);
+  color: var(--accent-dark);
   margin: 0 0 4px;
 }
 
