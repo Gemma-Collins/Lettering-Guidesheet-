@@ -30,7 +30,7 @@
       slantAngle: 55,
       lines: [
         { name: "Ascender",  offset: 14, style: "dashed", color: "#747379", thickness: 1 },
-        { name: "Waistline", offset: 7,  style: "dashed", color: "#747379", thickness: 1 },
+        { name: "Waistline", offset: 7,  style: "solid",  color: "#747379", thickness: 1 },
         { name: "Baseline",  offset: 0,  style: "solid",  color: "#747379", thickness: 1.5 },
         { name: "Descender", offset: -7, style: "dashed", color: "#747379", thickness: 1 }
       ]
@@ -40,8 +40,8 @@
       showSlant: true,
       slantAngle: 55,
       lines: [
-        { name: "Waistline", offset: 6, style: "dashed", color: "#747379", thickness: 1 },
-        { name: "Baseline",  offset: 0, style: "solid",  color: "#747379", thickness: 1.5 }
+        { name: "Waistline", offset: 6, style: "solid", color: "#747379", thickness: 1 },
+        { name: "Baseline",  offset: 0, style: "solid", color: "#747379", thickness: 1.5 }
       ]
     },
     simple: {
