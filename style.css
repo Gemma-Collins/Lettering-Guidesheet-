@@ -327,7 +327,21 @@ output {
   gap: 10px;
 }
 
-.preview-toolbar {
+.preview-header {
+  align-self: stretch;
+  margin-bottom: 12px;
+}
+
+.preview-header h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+#pageInfo {
+  display: block;
   font-family: "Raleway", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-weight: 500;
   font-size: 0.8rem;
@@ -345,7 +359,8 @@ output {
   border-radius: var(--radius);
   padding: 16px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   overflow: auto;
 }
 

@@ -309,7 +309,7 @@
 
     var mm = pageSizeMM();
     el.pageInfo.textContent =
-      "Preview — page 1 of " + state.pageCount +
+      "Page 1 of " + state.pageCount +
       " · " + mm.w.toFixed(0) + " × " + mm.h.toFixed(0) + " mm";
   }
 
