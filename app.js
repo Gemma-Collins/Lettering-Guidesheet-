@@ -270,7 +270,7 @@
     var textX = mm2px(5);
     var bottomY = canvas.height - mm2px(3);
     var rightEdge = canvas.width - mm2px(5);
-    var fontPx = pt2px(6);
+    var fontPx = pt2px(8);
 
     ctx.save();
     ctx.font = fontPx + "px -apple-system, BlinkMacSystemFont, sans-serif";
