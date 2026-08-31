@@ -280,7 +280,7 @@
 
     var logoW = 0, logoH = 0;
     if (logoLoaded && logoImg.naturalHeight > 0) {
-      logoH = mm2px(7);
+      logoH = mm2px(10);
       logoW = logoImg.naturalWidth * (logoH / logoImg.naturalHeight);
       ctx.drawImage(logoImg, rightEdge - logoW, bottomY - logoH, logoW, logoH);
     }
